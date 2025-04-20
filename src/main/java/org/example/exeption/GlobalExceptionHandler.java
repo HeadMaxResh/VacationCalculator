@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @ControllerAdvice
 @Log4j2
@@ -20,10 +21,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        String errorMessage = ex.getBindingResult()
+        String fieldErrors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+
+        String globalErrors = ex.getBindingResult()
+                .getGlobalErrors()
+                .stream()
+                .map(error -> error.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+
+        String errorMessage = Stream.of(fieldErrors, globalErrors)
+                .filter(msg -> !msg.isBlank())
                 .collect(Collectors.joining("; "));
 
         log.warn("Validation error: {}", errorMessage);
